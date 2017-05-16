@@ -34,8 +34,7 @@ def classNumberToClassVector(classNumber):
 def hexStringToClassVector(hexString):
     return classNumberToClassVector(characterToClassNumber(asciiCodeToCharacter(hexStringToDec(hexString))))
 
-def classVectorToCharacter(classVector):
-    index = classVector.index(1.0)
+def indexToCharacter(index):
     ret = ''
     if 0 <= index and index <= 9:
         ret = chr(index + ord('0'))
@@ -46,6 +45,24 @@ def classVectorToCharacter(classVector):
     else:
         ret = 'error: index not in [0, 61]'
     return ret
+
+def classVectorToCharacter(classVector):
+    index = classVector.index(max(classVector))
+    return indexToCharacter(index)
+
+def classVectorToMultipleCharacters(classVectorParam, possibilites):
+    classVector = classVectorParam[:]
+    ret = ''
+    minValue = min(classVector) - 1.0
+    for i in range(0, possibilites):
+        index = classVector.index(max(classVector))
+        ret += indexToCharacter(index) + ' '
+        classVector[index] = minValue     
+    return ret
+
+def classVectorStringToCharacter(classVector):
+    aux = [1.0 if x == '1' else 0.0 for x in classVector]
+    return classVectorToCharacter(aux)
 
 def readImagesFromFolder(baseFolderPath, typeOfData):
     dataX = []
@@ -184,7 +201,7 @@ def getClassesLocationIndices(data):
     ret.append((left, len(data[1]) - 1))
     return ret
 
-def getBatchOfDataAsStrings(data, classesIndices, totalCount = 1000, examplesPerClass = 100):
+def getRandomBatchOfDataAsStrings(data, classesIndices, totalCount = 1000, examplesPerClass = 100):
     # feed with data like this: data = [dataX, dataY]
     # call with totalCount = -1 OR examplesPerClass = -1
     dataX = data[0]
@@ -215,7 +232,7 @@ def getBatchOfDataAsStrings(data, classesIndices, totalCount = 1000, examplesPer
     return [retX, retY]
 
 
-def getBatchOfDataAsFloats(data, classesIndices, totalCount = 1000, examplesPerClass = 100):
+def getRandomBatchOfDataAsFloats(data, classesIndices, totalCount = 1000, examplesPerClass = 100):
     # feed with data like this: data = [dataX, dataY]
     # call with totalCount = -1 OR examplesPerClass = -1
     dataX = data[0]
@@ -230,6 +247,61 @@ def getBatchOfDataAsFloats(data, classesIndices, totalCount = 1000, examplesPerC
                 floatDataY = [float(y) for y in dataY[j]]
                 retX.append(floatDataX)
                 retY.append(floatDataY)
+    elif totalCount != -1:
+        baseCountOfExamplesPerClass = int(totalCount / 62)
+        count = 0
+        remainder = totalCount % 62
+        for (left, right) in classesIndices:
+            actualCountOfExamplesPerClass = baseCountOfExamplesPerClass
+            if count < remainder:
+                actualCountOfExamplesPerClass += 1
+            count += 1
+            randomPositions = random.sample(range(left, right+1), actualCountOfExamplesPerClass)
+            for j in randomPositions:
+                floatDataX = [float(x) for x in dataX[j]]
+                floatDataY = [float(y) for y in dataY[j]]
+                retX.append(floatDataX)
+                retY.append(floatDataY)
+    else:
+        print("both 'totalCount' and 'examplesPerClass' are equal to -1")
+    return [retX, retY]
+
+classesCurrentIndicesMap = {}
+def initClassesCurrentIndicesMap(data, classesIndices):
+    dataX = data[0]
+    dataY = data[1]
+    for (left, right) in classesIndices:
+        characterClass = classVectorStringToCharacter(dataY[left + 1])
+        classesCurrentIndicesMap[characterClass] = [left, right, left]    
+
+def getContinuousBatchOfDataAsFloats(data, classesIndices, totalCount = 1000, examplesPerClass = 100, one = 1.0, zero = 0.0):
+    # feed with data like this: data = [dataX, dataY]
+    # call with totalCount = -1 OR examplesPerClass = -1
+    dataX = data[0]
+    dataY = data[1]
+    retX = []
+    retY = []
+
+    if examplesPerClass != -1:
+        retX = [[]] * examplesPerClass * 62
+        retY = [[]] * examplesPerClass * 62
+        countRet = 0
+        for (left, right) in classesIndices:
+            characterClass = classVectorStringToCharacter(dataY[left + 1])
+            count = 1
+            indexInData = classesCurrentIndicesMap[characterClass][2]
+            while count <= examplesPerClass:
+                floatDataX = [one if x == '1' else zero for x in dataX[indexInData]]
+                floatDataY = [1.0 if y == '1' else 0.0 for y in dataY[indexInData]]
+                indexInData += 1
+                if indexInData >= right:
+                    indexInData = left
+                count += 1
+                retX[countRet] = floatDataX
+                retY[countRet] = floatDataY
+                countRet += 1
+            classesCurrentIndicesMap[characterClass][2] = indexInData
+
     elif totalCount != -1:
         baseCountOfExamplesPerClass = int(totalCount / 62)
         count = 0
