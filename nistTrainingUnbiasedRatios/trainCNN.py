@@ -30,20 +30,20 @@ import csv
 #_ = input()
 """
 
-pathOfProcessedImages = r"D:\Processed Images\32x32\\"
+pathOfProcessedImages = r"F:\Processed Images\32x32UnbiasedRatio\\"
 #dataTools.getAllLabeledData(pathOfProcessedImages)
-trainDataXPath = r"D:\Processed Images\trainDataX.csv"
-trainDataYPath = r"D:\Processed Images\trainDataY.csv"
+trainDataXPath = r"F:\Processed Images\32x32UnbiasedRatio\csvs\trainDataX.csv"
+trainDataYPath = r"F:\Processed Images\32x32UnbiasedRatio\csvs\trainDataY.csv"
 
-testDataXPath = r"D:\Processed Images\testDataX.csv"
-testDataYPath = r"D:\Processed Images\testDataY.csv"
+testDataXPath = r"F:\Processed Images\32x32UnbiasedRatio\csvs\testDataX.csv"
+testDataYPath = r"F:\Processed Images\32x32UnbiasedRatio\csvs\testDataY.csv"
 
 #dataTools.createCSVFiles(pathOfProcessedImages, trainDataXPath, trainDataYPath, testDataXPath, testDataYPath)
 
 logStatus = True
-print("Started readin labeled data")
-#allLabeledData = dataTools.getAllLabeledDataFromCSVFiles(trainDataXPath, trainDataYPath, testDataXPath, testDataYPath, logStatus) #correct
-allLabeledData = dataTools.getAllLabeledDataFromCSVFiles(testDataXPath, testDataYPath, testDataXPath, testDataYPath, logStatus)
+print("Started reading labeled data")
+allLabeledData = dataTools.getAllLabeledDataFromCSVFiles(trainDataXPath, trainDataYPath, testDataXPath, testDataYPath, logStatus) #correct
+#allLabeledData = dataTools.getAllLabeledDataFromCSVFiles(testDataXPath, testDataYPath, testDataXPath, testDataYPath, logStatus)
 print("Finished reading labeled data")
 
 print("Started creating classes location indices in the train labeled data..")
@@ -60,8 +60,8 @@ print("Finished creating classes location indices in the test labeled data..")
 # visually test a batch
 #dataTools.testBatchOfDataVisually(batchOfData)
 
-x = tf.placeholder(tf.float32, shape=[None, 32*32])
-y_ = tf.placeholder(tf.float32, shape=[None, 62])
+x = tf.placeholder(tf.float32, shape=[None, 32*32], name="x")
+y_ = tf.placeholder(tf.float32, shape=[None, 62], name="y_")
 
 def weight_variable(shape):
     initial = tf.truncated_normal(shape, stddev=0.1)
@@ -102,13 +102,14 @@ b_fc2 = bias_variable([1024])
 
 h_fc2 = tf.matmul(h_fc1, W_fc2) + b_fc2
 
-keep_prob = tf.placeholder(tf.float32)
+keep_prob = tf.placeholder(tf.float32, name="keep_prob")
 h_fc2_drop = tf.nn.dropout(h_fc2, keep_prob)
 
 W_fc3 = weight_variable([1024, 62])
 b_fc3 = bias_variable([62])
 
-y_conv = tf.matmul(h_fc2_drop, W_fc3) + b_fc3
+#y_conv = tf.matmul(h_fc2_drop, W_fc3) + b_fc3
+y_conv = tf.add(tf.matmul(h_fc2_drop, W_fc3), b_fc3, name="y_conv")
 
 cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y_conv))
 
@@ -119,24 +120,24 @@ accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 def trainWithRandomBatches():
     sess = tf.InteractiveSession()
     sess.run(tf.global_variables_initializer())
-    saver = tf.train.Saver()
+    saver = tf.train.Saver(max_to_keep=None)
     print("started training...")
-    stepsCount = 100000
-    for i in range(stepsCount):
-        batchOfData = dataTools.getRandomBatchOfDataAsFloats(allLabeledData[0], trainClassesIndices, totalCount = -1, examplesPerClass = 15)
+    stepsCount = 50001
+    for i in range(1, stepsCount):
+        batchOfData = dataTools.getRandomBatchOfDataAsFloats(allLabeledData[0], trainClassesIndices, totalCount = -1, examplesPerClass = 10) # examplesPerClass=15
         if i%100 == 0:
             train_accuracy = accuracy.eval(feed_dict={x:batchOfData[0], y_: batchOfData[1], keep_prob: 1.0})
             print("step %d, training accuracy %g"%(i, train_accuracy))
         if i%1000 == 0:
             print("creating checkpoint for step %d..." % (i))
             if i == 0:
-                saver.save(sess, r"D:\Saved Models\cnn1st", global_step=i, write_meta_graph = True)
+                saver.save(sess, r"F:\saved checkpoints\cnn3\cnn3", global_step=i, write_meta_graph = True)
             else:
-                saver.save(sess, r"D:\Saved Models\cnn1st", global_step=i, write_meta_graph = False)
+                saver.save(sess, r"F:\saved checkpoints\cnn3\cnn3", global_step=i, write_meta_graph = True)
             print("created checkpoint for step %d." % (i))
         train_step.run(feed_dict={x: batchOfData[0], y_: batchOfData[1], keep_prob: 0.5})
 
-    saver.save(sess, "cnn1st", global_step=stepsCount-1, write_meta_graph = False)
+    #saver.save(sess, "cnn1st", global_step=stepsCount-1, write_meta_graph = False)
     #print("test accuracy %g"%accuracy.eval(feed_dict={x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0}))
 
 def trainWithContinuousBatches(pathForStoringCheckPoints):
@@ -167,7 +168,7 @@ def createMetaFile():
     saver = tf.train.Saver()
     sess = tf.InteractiveSession()
     sess.run(tf.global_variables_initializer())
-    saver.save(sess, r"D:\Saved Models\cnn1st", global_step=1, write_meta_graph = True)
+    saver.save(sess, r"F:\saved checkpoints\cnn3\cnn3", global_step=7, write_meta_graph = True)
 
 def test(pathToRestoreCheckpoints, checkpointName, checkpointStep):
     typeOfData = 1 # 0 for train, 1 for test
