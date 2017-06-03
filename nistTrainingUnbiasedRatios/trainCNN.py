@@ -42,8 +42,6 @@ testDataYPath = r"D:\Processed Images\testDataY.csv"
 
 logStatus = True
 print("Started readin labeled data")
-
-#WARNING!!
 #allLabeledData = dataTools.getAllLabeledDataFromCSVFiles(trainDataXPath, trainDataYPath, testDataXPath, testDataYPath, logStatus) #correct
 allLabeledData = dataTools.getAllLabeledDataFromCSVFiles(testDataXPath, testDataYPath, testDataXPath, testDataYPath, logStatus)
 print("Finished reading labeled data")
@@ -217,7 +215,7 @@ def testNetVisually(pathToRestoreCheckpoints, checkpointName, checkpointStep):
             # yPredictedCharacter = dataTools.classVectorToCharacter(yPredictedVector[0].tolist())
             yLabeledCharacter = dataTools.classVectorToCharacter(yLabeledVector)
 
-            #WriteExampleToFile(batchOfData[0][j], yLabeledCharacter, r"C:\HandwritingRecognition\CommonResources\simpleExample.txt")
+            WriteExampleToFile(batchOfData[0][j], yLabeledCharacter, r"C:\HandwritingRecognition\CommonResources\simpleExample.txt")
 
             print(graphicLetter)
             #print("Predicted character: " + yPredictedCharacter)
